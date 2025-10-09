@@ -11,10 +11,25 @@ jobs:
     if: github.event_name == 'push'
     
     steps:
-      - name: Job 1 (Fails on Push)
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Check config file and decide success/failure
         run: |
-          echo "❌ Job 1 failed"
-          exit 1
+          # config.txtファイルの内容をチェック
+          config_value=$(cat config.txt | tr -d '[:space:]')
+          echo "Config value: $config_value"
+          
+          if [ "$config_value" = "success" ]; then
+            echo "✅ Job 1 succeeded (config.txt = success)"
+            exit 0
+          elif [ "$config_value" = "failure" ]; then
+            echo "❌ Job 1 failed (config.txt = failure)"
+            exit 1
+          else
+            echo "❌ Job 1 failed (unknown config value: $config_value)"
+            exit 1
+          fi
 
   check-results:
     name: Check Results
