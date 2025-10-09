@@ -1,0 +1,38 @@
+name: Conditional CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  job1:
+    name: Job 1
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Job 1 (Fails on Push)
+        run: |
+          echo "❌ Job 1 failed"
+          exit 1
+
+  check-results:
+    name: Check Results
+    runs-on: ubuntu-latest
+    needs: [job1]
+    if: always()
+    
+    steps:
+      - name: Check job results
+        run: |
+          echo "=== Job Results ==="
+          echo "Job1 result: ${{ needs.job1.result }}"
+          echo "Event type: ${{ github.event_name }}"
+          echo ""
+          
+          if [[ "${{ needs.job1.result }}" == "failure" ]]; then
+            echo "❌ One or more jobs failed"
+            exit 1
+          fi
+          
+          echo "✅ All jobs succeeded"
