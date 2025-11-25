@@ -1,54 +1,52 @@
-name: Conditional CI
+name: Conditional Example
 
 on:
   push:
   pull_request:
-  workflow_dispatch: 
 
 jobs:
-  job1:
-    name: Job 1
+  push-job:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Check config file and decide success/failure
+      - name: Wait for a bit on push
+        run: sleep 60
+
+  pr-job:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Finish quickly on PR
+        run: echo "PR job done"
+
+  check-results-push:
+    runs-on: ubuntu-latest
+    needs: push-job
+    if: github.event_name == 'push' && always()
+    steps:
+      - name: Report push job results
         run: |
-          # config.txtファイルの内容をチェック
-          config_value=$(cat config.txt | tr -d '[:space:]')
-          echo "Config value: $config_value"
-          
-          if [ "$config_value" = "success" ]; then
-            echo "✅ Job 1 succeeded (config.txt = success)"
-            exit 0
-          elif [ "$config_value" = "failure" ]; then
-            echo "❌ Job 1 failed (config.txt = failure)"
-            exit 1
-          else
-            echo "❌ Job 1 failed (unknown config value: $config_value)"
+          echo "push-job: ${{ needs.push-job.result }}"
+
+          if [[ "${{ needs.push-job.result }}" == "failure" ]]; then
+            echo "❌ push-job failed"
             exit 1
           fi
 
-  check-results:
-    name: Check Results
+          echo "✅ push-job passed or was skipped"
+
+  check-results-pr:
     runs-on: ubuntu-latest
-    needs: [job1]
-    if: always()
-    
+    needs: pr-job
+    if: github.event_name == 'pull_request' && always()
     steps:
-      - name: Check job results
+      - name: Report PR job results
         run: |
-          echo "=== Job Results ==="
-          echo "Job1 result: ${{ needs.job1.result }}"
-          echo "Event type: ${{ github.event_name }}"
-          echo ""
-          
-          if [[ "${{ needs.job1.result }}" == "failure" ]]; then
-            echo "❌ One or more jobs failed"
+          echo "pr-job: ${{ needs.pr-job.result }}"
+
+          if [[ "${{ needs.pr-job.result }}" == "failure" ]]; then
+            echo "❌ pr-job failed"
             exit 1
           fi
-          
-          echo "✅ All jobs succeeded"
+
+          echo "✅ pr-job passed or was skipped"
